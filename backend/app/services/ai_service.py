@@ -1,5 +1,5 @@
 """
-AI Service for code operations using OpenAI and LangChain.
+AI Service for code operations using OpenAI and LangChain with caching.
 """
 from typing import List, Dict, Any
 import openai
@@ -7,13 +7,17 @@ from langchain.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 from langchain.chains import LLMChain
 from app.core.config import settings
+from app.core.logging import get_logger
 from app.schemas.code import Bug
+from app.services.cache_service import cache_service
 import json
 import re
 
+logger = get_logger(__name__)
+
 
 class AIService:
-    """Service for AI-powered code operations."""
+    """Service for AI-powered code operations with caching."""
 
     def __init__(self):
         """Initialize AI service with OpenAI configuration."""
@@ -27,6 +31,7 @@ class AIService:
             max_tokens=settings.MAX_TOKENS,
             openai_api_key=settings.OPENAI_API_KEY,
         )
+        logger.info("AI Service initialized", model=settings.OPENAI_MODEL)
 
     async def generate_code(
         self, prompt: str, language: str, context: str = None
@@ -42,6 +47,29 @@ class AIService:
         Returns:
             Dictionary with generated code and explanation
         """
+        # Try to get from cache
+        cache_key_params = {
+            "prompt": prompt,
+            "language": language,
+            "context": context or "",
+        }
+        cached = await cache_service.get("generate", **cache_key_params)
+
+        if cached:
+            logger.info(
+                "Cache hit for code generation",
+                language=language,
+                prompt_length=len(prompt),
+            )
+            return cached
+
+        logger.info(
+            "Generating code",
+            language=language,
+            prompt_length=len(prompt),
+            has_context=context is not None,
+        )
+
         template = """You are an expert {language} programmer. Generate clean, efficient, and well-documented code.
 
 Task: {prompt}
@@ -71,10 +99,21 @@ Code:"""
 
         code = result["text"].strip()
 
-        return {
+        response = {
             "code": code,
             "explanation": f"Generated {language} code based on the prompt: {prompt}",
         }
+
+        # Cache the result
+        await cache_service.set("generate", response, **cache_key_params)
+
+        logger.info(
+            "Code generated successfully",
+            language=language,
+            code_length=len(code),
+        )
+
+        return response
 
     async def explain_code(self, code: str, language: str) -> str:
         """
@@ -87,6 +126,16 @@ Code:"""
         Returns:
             Detailed explanation of the code
         """
+        # Try to get from cache
+        cache_key_params = {"code": code, "language": language}
+        cached = await cache_service.get("explain", **cache_key_params)
+
+        if cached:
+            logger.info("Cache hit for code explanation", language=language)
+            return cached.get("explanation", "")
+
+        logger.info("Explaining code", language=language, code_length=len(code))
+
         template = """You are an expert {language} programmer. Explain the following code in detail.
 
 Code:
@@ -110,7 +159,16 @@ Explanation:"""
 
         result = await chain.ainvoke({"language": language, "code": code})
 
-        return result["text"].strip()
+        explanation = result["text"].strip()
+
+        # Cache the result
+        await cache_service.set(
+            "explain", {"explanation": explanation}, **cache_key_params
+        )
+
+        logger.info("Code explained successfully", explanation_length=len(explanation))
+
+        return explanation
 
     async def detect_bugs(self, code: str, language: str) -> List[Bug]:
         """
@@ -123,6 +181,16 @@ Explanation:"""
         Returns:
             List of detected bugs
         """
+        # Try to get from cache
+        cache_key_params = {"code": code, "language": language}
+        cached = await cache_service.get("detect_bugs", **cache_key_params)
+
+        if cached:
+            logger.info("Cache hit for bug detection", language=language)
+            return [Bug(**bug) for bug in cached.get("bugs", [])]
+
+        logger.info("Detecting bugs", language=language, code_length=len(code))
+
         template = """You are an expert {language} code reviewer. Analyze the following code for bugs, vulnerabilities, and issues.
 
 Code:
@@ -156,7 +224,7 @@ Response:"""
         # Try to extract JSON from the response
         try:
             # Look for JSON array in the response
-            json_match = re.search(r'\[.*\]', response_text, re.DOTALL)
+            json_match = re.search(r"\[.*\]", response_text, re.DOTALL)
             if json_match:
                 bugs_data = json.loads(json_match.group())
             else:
@@ -171,9 +239,19 @@ Response:"""
                 ]
 
             bugs = [Bug(**bug) for bug in bugs_data]
+
+            # Cache the result
+            bugs_dict = [bug.model_dump() for bug in bugs]
+            await cache_service.set(
+                "detect_bugs", {"bugs": bugs_dict}, **cache_key_params
+            )
+
+            logger.info("Bugs detected", bug_count=len(bugs))
+
             return bugs
 
         except (json.JSONDecodeError, Exception) as e:
+            logger.warning("Failed to parse bug detection response", error=str(e))
             # If parsing fails, return a general response
             return [
                 Bug(
@@ -198,6 +276,25 @@ Response:"""
         Returns:
             Dictionary with refactored code and explanation
         """
+        # Try to get from cache
+        cache_key_params = {
+            "code": code,
+            "language": language,
+            "instructions": instructions or "",
+        }
+        cached = await cache_service.get("refactor", **cache_key_params)
+
+        if cached:
+            logger.info("Cache hit for code refactoring", language=language)
+            return cached
+
+        logger.info(
+            "Refactoring code",
+            language=language,
+            code_length=len(code),
+            has_instructions=instructions is not None,
+        )
+
         instructions_section = (
             f"\nSpecific instructions: {instructions}" if instructions else ""
         )
@@ -238,10 +335,17 @@ Refactored Code:"""
 
         refactored = result["text"].strip()
 
-        return {
+        response = {
             "code": refactored,
             "explanation": "Code has been refactored to improve quality, readability, and maintainability.",
         }
+
+        # Cache the result
+        await cache_service.set("refactor", response, **cache_key_params)
+
+        logger.info("Code refactored successfully", refactored_length=len(refactored))
+
+        return response
 
     async def generate_documentation(
         self, code: str, language: str, style: str = "google"
@@ -257,6 +361,21 @@ Refactored Code:"""
         Returns:
             Code with added documentation
         """
+        # Try to get from cache
+        cache_key_params = {"code": code, "language": language, "style": style}
+        cached = await cache_service.get("document", **cache_key_params)
+
+        if cached:
+            logger.info("Cache hit for documentation generation", language=language)
+            return cached.get("documented_code", "")
+
+        logger.info(
+            "Generating documentation",
+            language=language,
+            code_length=len(code),
+            style=style,
+        )
+
         template = """You are an expert {language} programmer. Add comprehensive documentation to the following code.
 
 Code:
@@ -282,7 +401,16 @@ Provide the fully documented code:"""
             {"language": language, "code": code, "style": style}
         )
 
-        return result["text"].strip()
+        documented = result["text"].strip()
+
+        # Cache the result
+        await cache_service.set(
+            "document", {"documented_code": documented}, **cache_key_params
+        )
+
+        logger.info("Documentation generated successfully", doc_length=len(documented))
+
+        return documented
 
 
 # Singleton instance

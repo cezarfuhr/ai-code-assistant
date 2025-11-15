@@ -2,7 +2,7 @@
  * Main application component.
  */
 import React, { useState } from 'react';
-import { CodeEditor } from './components/CodeEditor';
+import { MonacoCodeEditor } from './components/MonacoCodeEditor';
 import { BugList } from './components/BugList';
 import { apiService, Bug } from './services/api';
 import './styles/App.css';
@@ -212,7 +212,7 @@ function App() {
           ) : (
             <>
               <label>Your Code:</label>
-              <CodeEditor value={code} onChange={setCode} language={language} />
+              <MonacoCodeEditor value={code} onChange={setCode} language={language} />
             </>
           )}
         </div>
@@ -235,7 +235,7 @@ function App() {
           ) : (
             <>
               {(activeFeature === 'generate' || activeFeature === 'refactor' || activeFeature === 'document') && code && (
-                <CodeEditor value={code} onChange={setCode} language={language} readOnly />
+                <MonacoCodeEditor value={code} onChange={setCode} language={language} readOnly />
               )}
               {output && (
                 <div className="explanation">

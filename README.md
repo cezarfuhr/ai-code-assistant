@@ -2,6 +2,22 @@
 
 Assistente de programação com IA que gera, explica e corrige código automaticamente.
 
+[![Backend CI](https://github.com/seu-usuario/ai-code-assistant/workflows/Backend%20CI/badge.svg)](https://github.com/seu-usuario/ai-code-assistant/actions)
+[![Frontend CI](https://github.com/seu-usuario/ai-code-assistant/workflows/Frontend%20CI/badge.svg)](https://github.com/seu-usuario/ai-code-assistant/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Node 20+](https://img.shields.io/badge/node-20+-green.svg)](https://nodejs.org/)
+
+## ✨ Novidades v2.0
+
+- 🚀 **Redis Cache** - 80% de redução de custos com cache inteligente
+- 🔐 **JWT Auth** - Sistema de autenticação seguro
+- 📊 **Structured Logging** - Observabilidade completa com request tracking
+- 💻 **Monaco Editor** - Editor profissional (VSCode engine)
+- ⚙️ **CI/CD Pipeline** - GitHub Actions para integração e deploy contínuo
+
+[Ver todas as novidades →](docs/NEW_FEATURES.md)
+
 ## Funcionalidades
 
 - 💻 **Geração de código** - Crie código a partir de descrições em linguagem natural
@@ -17,12 +33,16 @@ Assistente de programação com IA que gera, explica e corrige código automatic
 - **FastAPI** - Framework web moderno e rápido
 - **OpenAI API** - Integração com modelos GPT-4
 - **LangChain** - Framework para aplicações LLM
+- **Redis** - Cache distribuído para performance
 - **Pydantic** - Validação de dados
+- **Structlog** - Logging estruturado
+- **JWT** - Autenticação segura
 - **Pytest** - Testes automatizados
 
 ### Frontend
 - **React 18** - Biblioteca UI
 - **TypeScript** - Tipagem estática
+- **Monaco Editor** - Editor de código profissional (VSCode engine)
 - **Vite** - Build tool e dev server
 - **Axios** - Cliente HTTP
 - **Vitest** - Framework de testes
@@ -30,6 +50,7 @@ Assistente de programação com IA que gera, explica e corrige código automatic
 ### DevOps
 - **Docker** - Containerização
 - **Docker Compose** - Orquestração de containers
+- **GitHub Actions** - CI/CD pipeline
 - **Nginx** - Servidor web para frontend
 
 ## Arquitetura

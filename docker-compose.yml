@@ -1,6 +1,23 @@
 version: '3.8'
 
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: ai-code-assistant-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - ai-code-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
@@ -17,8 +34,17 @@ services:
       - PORT=8000
       - API_V1_STR=/api/v1
       - BACKEND_CORS_ORIGINS=["http://localhost:3000","http://localhost:80","http://frontend"]
+      - REDIS_ENABLED=true
+      - REDIS_URL=redis://redis:6379/0
+      - CACHE_TTL=3600
+      - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
     volumes:
       - ./backend:/app
+    depends_on:
+      redis:
+        condition: service_healthy
     networks:
       - ai-code-network
     restart: unless-stopped
@@ -55,4 +81,4 @@ networks:
     driver: bridge
 
 volumes:
-  backend-data:
+  redis-data:
