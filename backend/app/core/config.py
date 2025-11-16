@@ -11,8 +11,8 @@ class Settings(BaseSettings):
     # API Configuration
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "AI Code Assistant"
-    VERSION: str = "2.0.0"
-    DESCRIPTION: str = "AI-powered code assistant for generation, explanation, and debugging"
+    VERSION: str = "3.0.0"
+    DESCRIPTION: str = "AI-powered code assistant for generation, explanation, debugging, with full database support and rate limiting"
 
     # CORS
     BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8080"]
@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-4"
     OPENAI_TEMPERATURE: float = 0.7
     MAX_TOKENS: int = 2000
+
+    # Database Configuration
+    DATABASE_URL: str = "postgresql+asyncpg://aicode:aicode123@postgres:5432/aicode"
+    DATABASE_ECHO: bool = False
 
     # Redis Cache Configuration
     REDIS_ENABLED: bool = True
@@ -37,6 +41,10 @@ class Settings(BaseSettings):
     # Rate Limiting
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_PER_MINUTE: int = 10
+
+    # AI Models Configuration
+    AVAILABLE_MODELS: list[str] = ["gpt-4", "gpt-3.5-turbo", "gpt-4-turbo"]
+    DEFAULT_MODEL: str = "gpt-4"
 
     # Logging
     LOG_LEVEL: str = "INFO"

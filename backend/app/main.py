@@ -10,9 +10,13 @@ import structlog
 
 from app.core.config import settings
 from app.core.logging import setup_logging, get_logger
+from app.core.database import init_db, close_db
+from app.core.rate_limit import limiter
 from app.api.endpoints import router as api_router
 from app.api.auth import router as auth_router
 from app.services.cache_service import cache_service
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 # Setup logging
 setup_logging()
@@ -26,6 +30,10 @@ app = FastAPI(
     docs_url=f"{settings.API_V1_STR}/docs",
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
 )
+
+# Add rate limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 # Middleware for request tracking
@@ -100,7 +108,15 @@ async def startup_event():
         "Starting AI Code Assistant",
         version=settings.VERSION,
         redis_enabled=settings.REDIS_ENABLED,
+        database_enabled=True,
     )
+
+    # Initialize database
+    try:
+        await init_db()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error("Failed to initialize database", error=str(e))
 
     # Connect to Redis cache
     await cache_service.connect()
@@ -113,6 +129,9 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("Shutting down AI Code Assistant")
+
+    # Close database connections
+    await close_db()
 
     # Disconnect from Redis
     await cache_service.disconnect()
